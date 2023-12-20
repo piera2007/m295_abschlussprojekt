@@ -1,0 +1,45 @@
+commit 7c11722a4346a5caeb1e01dc728ade697b46c374 (HEAD -> main, origin/main)
+Author: Piera <pieramblum@gmail.com>
+Date:   Wed Dec 20 15:21:22 2023 +0100
+
+    zwischenstand
+
+commit 8a4060b1f4f2e94256e5e1c45a273d0e54ad3d65
+:...skipping...
+commit 7c11722a4346a5caeb1e01dc728ade697b46c374 (HEAD -> main, origin/main)
+Author: Piera <pieramblum@gmail.com>
+Date:   Wed Dec 20 15:21:22 2023 +0100
+
+    zwischenstand
+
+commit 8a4060b1f4f2e94256e5e1c45a273d0e54ad3d65
+Author: Piera <pieramblum@gmail.com>
+Date:   Wed Dec 20 10:39:37 2023 +0100
+
+    2ter versuch richtig block 1
+
+commit 298eb524b7567f828b189a1c36ba65bd6fcbff98
+Author: Piera <pieramblum@gmail.com>
+Date:   Wed Dec 20 10:31:42 2023 +0100
+
+    erster teil richtig fertig
+
+commit 058cd64189705f12eb1e5653799b7aea4543a9fb
+Author: Piera <pieramblum@gmail.com>
+Date:   Wed Dec 20 08:46:41 2023 +0100
+
+    first commit
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+~
+(END)

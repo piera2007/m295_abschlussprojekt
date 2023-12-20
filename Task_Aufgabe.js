@@ -1,48 +1,56 @@
 /**
- * Author: Piera Blum
- * Date: 20.12.2023
- * ka
+ * Autor: Piera Blum
+ * Datum: 20.12.2023
+ * Das Programm ist eine einfache Task-Verwaltungsanwendung mit Authentifizierung.
  */
 
 const express = require("express");
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger_output.json");
+
 const app = express();
 const port = 3000;
-const SECRET_KEY = "your-secret-key";
 
-const authenticatedTokens = [];
-const tokens = new Set();
-
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger_output.json'); // Passe den Pfad zur generierten JSON-Datei an
-
+const SECRET_KEY = "piera";
+// Middleware zur Verarbeitung von JSON-Daten
 app.use(bodyParser.json());
-// Middleware zur Überprüfung des Tokens bei allen Endpunkten (außer /login)
+// Middleware zur Überprüfung des Tokens bei allen Endpunkten (ausser /login und /swagger-ui/)
 app.use((req, res, next) => {
+  // Pfad /swagger-ui/ ausschliessen
+  if (req.path.startsWith("/swagger-ui/")) {
+    return next();
+  }
+  // Pfad /login ausschliessen
   if (req.path === "/login") {
     return next();
   }
+
   const authHeader = req.headers.authorization;
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
+    res
       .status(401)
-      .json({ error: "Unauthorized - Bearer Token not provided" });
-  }
-  const token = authHeader.split(" ")[1];
-  if (!token) {
-    return res
-      .status(401)
-      .json({ error: "Unauthorized - Invalid token format" });
-  }
-  try {
-    jwt.verify(token, SECRET_KEY);
-    next();
-  } catch (error) {
-    res.status(401).json({ error: "Unauthorized - Invalid token" });
+      .json({ error: "Unberechtigt - Bearer Token nicht angegeben" });
+  } else {
+    const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      res.status(401).json({ error: "Unberechtigt - Ungültiges Token-Format" });
+    } else {
+      try {
+        jwt.verify(token, SECRET_KEY);
+        next();
+      } catch (error) {
+        res.status(401).json({ error: "Unberechtigt - Ungültiges Token" });
+      }
+    }
   }
 });
+
+// Beispiel-Daten für Tasks
 let tasks = [
   {
     id: 1,
@@ -56,63 +64,11 @@ let tasks = [
   },
   {
     id: 3,
-    title: "Freunde Treffen und Töff fahren",
-    description: "Meinen Kopf frei bekommen und Zeit mit Freunden genießen",
+    title: "Freunde treffen und Töff fahren",
+    description: "Meinen Kopf frei bekommen und Zeit mit Freunden geniessen",
   },
 ];
 
-// Middleware für Fehlerbehandlung
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
-});
-
-// Authentifizierung Middleware
-function authenticateUser(req, res, next) {
-  const token = req.headers.authorization;
-
-  if (!token || !authenticatedTokens.includes(token)) {
-    return res
-      .status(403)
-      .json({ error: "Forbidden: Invalid or missing token" });
-  }
-
-  next();
-}
-
-// POST /login Endpunkt - Credentials überprüfen und Token zurückgeben
-app.post("/login", (req, res) => {
-  const { mail, password } = req.body;
-  if (mail === "pieramblum@gmail.com" && password === "piera") {
-    const token = jwt.sign({ mail }, SECRET_KEY, { expiresIn: "1h" });
-    res.json({ token });
-  } else {
-    res.status(401).json({ error: "Invalid credentials" });
-  }
-});
-
-// DELETE /logout Endpunkt - Token als ungültig markieren
-app.delete("/logout", (req, res) => {
-  const token = req.headers.authorization;
-  if (token && tokens.has(token)) {
-    tokens.delete(token);
-    res.json({ message: "Logout successful" });
-  } else {
-    res.status(400).json({ error: "Invalid token or already logged out" });
-  }
-});
-
-// GET /verify Endpunkt - Token auf Gültigkeit überprüfen
-app.get("/verify", (req, res) => {
-  res.json({ message: "Token is valid" });
-});
-
-// GET /tasks Endpunkt
 // GET /tasks Endpunkt - Alle Tasks abrufen
 app.get("/tasks", (req, res) => {
   res.json(tasks);
@@ -121,52 +77,133 @@ app.get("/tasks", (req, res) => {
 // POST /tasks Endpunkt - Neuen Task erstellen
 app.post("/tasks", (req, res) => {
   const newTask = req.body;
+
   // Validierung der eingehenden Daten
   if (!newTask || !newTask.title || !newTask.description) {
-    return res
+    res
       .status(400)
-      .json({ error: "Invalid data - Title and description are required" });
+      .json({
+        error: "Ungültige Daten - Titel und Beschreibung sind erforderlich",
+      });
+  } else {
+    newTask.id = tasks.length + 1;
+    tasks.push(newTask);
+    res.json(newTask);
   }
-  newTask.id = tasks.length + 1;
-  tasks.push(newTask);
-  res.json(newTask);
 });
 
 // GET /tasks/{id} Endpunkt - Einen einzelnen Task abrufen
 app.get("/tasks/:id", (req, res) => {
   const taskId = parseInt(req.params.id);
-  console.log("Requested task ID:", taskId);
-  console.log("Tasks array:", tasks);
   const task = tasks.find((t) => t.id === taskId);
-  console.log("Found task:", task);
+
   if (task) {
-    res.status(200).json(task);
+    res.json(task);
   } else {
-    res.status(404).json({ error: "Task not found" });
+    res.status(404).json({ error: "Task nicht gefunden" });
   }
 });
 
 // PUT /tasks/{id} Endpunkt - Einen bestehenden Task verändern
-app.put('/tasks/:id', (req, res) => {
-    const taskId = parseInt(req.params.id);
-    const updatedTask = req.body;
-    // Validierung der eingehenden Daten
-    if (!updatedTask || !updatedTask.title || !updatedTask.description) {
-        return res.status(400).json({ error: 'Invalid data - Title and description are required' });
-    }
-    tasks = tasks.map((task) => (task.id === taskId ? { ...task, ...updatedTask } : task));
+app.put("/tasks/:id", (req, res) => {
+  const taskId = parseInt(req.params.id);
+  const updatedTask = req.body;
+
+  // Validierung der eingehenden Daten
+  if (!updatedTask || !updatedTask.title || !updatedTask.description) {
+    res
+      .status(400)
+      .json({
+        error: "Ungültige Daten - Titel und Beschreibung sind erforderlich",
+      });
+  } else {
+    tasks = tasks.map((task) =>
+      task.id === taskId ? { ...task, ...updatedTask } : task
+    );
     res.json({ id: taskId, ...updatedTask });
+  }
 });
 
 // DELETE /tasks/{id} Endpunkt - Einen Task löschen
 app.delete("/tasks/:id", (req, res) => {
   const taskId = parseInt(req.params.id);
   tasks = tasks.filter((task) => task.id !== taskId);
-  res.json({ message: "Task deleted successfully" });
+  res.json({ message: "Task erfolgreich gelöscht" });
 });
 
-// Verwenden von Swagger UI Middleware
-app.use('/swagger-ui/', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// POST /login Endpunkt - Credentials überprüfen und Token zurückgeben
+app.post("/login", (req, res) => {
+  const { mail, password } = req.body;
+
+  if (mail === "pieramblum@gmail.com" && password === "piera") {
+    const token = jwt.sign({ mail }, SECRET_KEY, { expiresIn: "1h" });
+    res.json({ token });
+  } else {
+    res.status(401).json({ error: "Ungültige Zugangsdaten" });
+  }
+});
+
+// DELETE /logout Endpunkt - Token als ungültig markieren
+app.delete("/logout", (req, res) => {
+  const token = req.headers.authorization.split(" ")[1];
+
+  if (blacklist.has(token)) {
+    // Token befindet sich bereits auf der Blacklist
+    res.status(400).json({ error: "Ungültiges Token oder bereits ausgeloggt" });
+  } else {
+    try {
+      // Verifiziere den Token erst, wenn er nicht auf der Blacklist steht
+      jwt.verify(token, SECRET_KEY);
+      // Füge den Token zur Blacklist hinzu
+      blacklist.add(token);
+      res.status(204).end(); // Antwort ohne Content mit Statuscode 204
+    } catch (error) {
+      // Fehler beim Verifizieren des Tokens
+      res.status(401).json({ error: "Unberechtigt - Ungültiges Token" });
+    }
+  }
+});
+
+app.use("/swagger-ui/", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// GET /verify Endpunkt - Token auf Gültigkeit überprüfen
+app.get("/verify", (req, res) => {
+  res.json({ message: "Token ist gültig" });
+});
+
+// Hier könnten Sie eine echte Datenbank oder eine fortgeschrittenere Logik integrieren
+let tokens = new Set();
+// Erstelle eine separate Blacklist
+let blacklist = new Set();
+
+// Middleware zur Überprüfung des Tokens bei allen Endpunkten (ausser /login)
+app.use((req, res, next) => {
+  // Pfad /swagger-ui/ ausschliessen
+  if (req.path.startsWith("/swagger-ui/")) {
+    return next();
+  }
+  // Pfad /login ausschliessen
+  if (req.path === "/login") {
+    return next();
+  }
+
+  const token = req.headers.authorization;
+
+  if (!token) {
+    res.status(401).json({ error: "Unberechtigt - Token nicht angegeben" });
+  } else if (blacklist.has(token)) {
+    res.status(401).json({ error: "Unberechtigt - Token ist ungültig" });
+  } else {
+    try {
+      jwt.verify(token, SECRET_KEY);
+      next();
+    } catch (error) {
+      res.status(401).json({ error: "Unberechtigt - Ungültiges Token" });
+    }
+  }
+});
+
+// Server starten
 app.listen(port, () => {
   console.log(`Server läuft auf http://localhost:${port}`);
 });
