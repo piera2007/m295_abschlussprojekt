@@ -6,9 +6,11 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 const PORT = 3000;
+const secretKey = "yourSecretKey"; // Geheimes Schlüssel für die Token-Signierung
 
 const tasks = [
   {
@@ -24,7 +26,7 @@ const tasks = [
   {
     id: "3",
     title: "Freunde Treffen und Töff fahren",
-    description: "Meinen Kopf frei bekommen und Zeit mit Freunden genissen",
+    description: "Meinen Kopf frei bekommen und Zeit mit Freunden genießen",
   },
 ];
 
@@ -37,8 +39,13 @@ app.get("/tasks", (req, res) => {
 
 app.post("/tasks", (req, res) => {
   const newTask = req.body;
-  tasks.push(newTask);
-  res.json(newTask);
+
+  if (!newTask.title || !newTask.description) {
+    res.status(422).json({ error: "Missing required attributes" });
+  } else {
+    tasks.push(newTask);
+    res.status(201).json(newTask);
+  }
 });
 
 app.get("/tasks/:id", (req, res) => {
@@ -57,17 +64,17 @@ app.put("/tasks/:id", (req, res) => {
   const updatedTaskData = req.body;
 
   if (!updatedTaskData.title || !updatedTaskData.description) {
-    return res.status(422).json({ error: "Missing required attributes" });
+    res.status(422).json({ error: "Missing required attributes" });
+  } else {
+    const index = tasks.findIndex((t) => t.id === taskId);
+
+    if (index !== -1) {
+      tasks[index] = updatedTaskData;
+      res.status(200).json(updatedTaskData);
+    } else {
+      res.status(404).json({ error: "Task not found" });
+    }
   }
-
-  const index = tasks.findIndex((t) => t.id === taskId);
-
-  if (index !== -1) {
-    tasks[index] = updatedTaskData;
-    return res.status(200).json(updatedTaskData);
-  }
-
-  return res.status(404).json({ error: "Task not found" });
 });
 
 app.delete("/tasks/:id", (req, res) => {
@@ -76,7 +83,7 @@ app.delete("/tasks/:id", (req, res) => {
 
   if (index !== -1) {
     const deletedTask = tasks.splice(index, 1);
-    res.json(deletedTask[0]);
+    res.status(200).json(deletedTask[0]);
   } else {
     res.status(404).json({ message: "Task not found" });
   }
